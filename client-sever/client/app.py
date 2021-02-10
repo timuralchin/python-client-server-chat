@@ -57,6 +57,8 @@ class ClientApp:
         userWindow = Toplevel(parentWindow)
         userWindow.title('Chat') 
         userWindow.geometry(self.appSize)
+        goBackButton = Button(userWindow, text="Go back", command=lambda: self.goBack(parentWindow, userWindow))  
+        goBackButton.place(anchor='center', relx =.5, rely=.5)  
 
 
     def loginScreen(self):        
