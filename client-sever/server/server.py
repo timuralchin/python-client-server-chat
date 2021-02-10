@@ -110,9 +110,7 @@ class ServerApp:
                 print('Disconnected by', client_addr)        
                 client_sock.close()
         finally:
-            self.serv_sock.close() 
-
-   
+            self.serv_sock.close()   
     
 
 

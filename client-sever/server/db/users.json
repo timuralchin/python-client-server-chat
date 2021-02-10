@@ -1,24 +1,8 @@
 {
     "users": [
         {
-            "username": "sdf",
-            "password": "d4b2758da0205c1e0aa9512cd188002a"
-        },
-        {
-            "username": "Test",
-            "password": "0cbc6611f5540bd0809a388dc95a615b"
-        },
-        {
-            "username": "Lera",
-            "password": "87c0813f665cf748d76d4bfb80faebeb"
-        },
-        {
-            "username": "yyy",
-            "password": "f0a4058fd33489695d53df156b77c724"
-        },
-        {
-            "username": "qwe",
-            "password": "76d80224611fc919a5d54f0ff9fba446"
+            "username": "Timur",
+            "password": "c37789078f9c2ff70f67e7596321ebf0"
         }
     ]
 }

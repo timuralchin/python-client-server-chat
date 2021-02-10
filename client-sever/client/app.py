@@ -15,8 +15,10 @@ class ClientApp:
         self.port = port
         self.server_url = server_url
         self.window = Tk()
-        self.window.geometry('600x400')
+        self.appSize = '600x400'
+        self.window.geometry(self.appSize)
         self.window.resizable(width=False, height=False)
+        self.hideImage = PhotoImage(file='src/img/eye-icon.png').subsample(6,6)
         
     def start(self):       
         self.client_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -27,6 +29,7 @@ class ClientApp:
             self.window.mainloop()
         finally:
             self.client_sock.close()
+
     def encodeText(self, text):
         return hashlib.md5(text.encode()).hexdigest()
 
@@ -41,28 +44,48 @@ class ClientApp:
         else:
             return True
     
-    def loginScreen(self):
-        #self.window.withdraw()
-        loginWindow =self.window #Toplevel(self.window)
+    def changePasswordVisibility(self, passwordField):        
+        state = passwordField[0].cget("show")
+        for etry in passwordField:
+            if state == '':
+                etry.config(show="*")
+            else:
+                etry.config(show="")
+
+    def userScreen(self, parentWindow):
+        parentWindow.withdraw()
+        userWindow = Toplevel(parentWindow)
+        userWindow.title('Chat') 
+        userWindow.geometry(self.appSize)
+
+
+    def loginScreen(self):        
+        loginWindow =self.window 
         loginWindow.title('Login')
-        #loginWindow.geometry('600x400')
+        
 
         usernameLabel = Label(loginWindow, text="Username")  
-        usernameLabel.place(anchor='center', relx =.5, rely=.1)  
+        usernameLabel.place(anchor='center',relx =.5, rely=.1)  
 
-        usernameField = Entry(loginWindow,width=10)  
-        usernameField.place(anchor='center', relx =.5, rely=.15) 
+        usernameField = Entry(loginWindow,)  
+        usernameField.place(anchor='center',width=100, height=25, relx =.5, rely=.15) 
 
         passwordLabel = Label(loginWindow, text="Password")  
         passwordLabel.place(anchor='center', relx =.5, rely=.3)
 
-        passwordField = Entry(loginWindow,width=10,show="*")  
-        passwordField.place(anchor='center', relx =.5, rely=.35)
+        passwordField = Entry(loginWindow,show="*")  
+        passwordField.place(anchor='center', width=100, height=25,  relx =.5, rely=.35)
+        
+        entries = [passwordField]
+
+        hideFieldsButton = Button(loginWindow, image=self.hideImage, command=lambda: self.changePasswordVisibility(entries))  
+        hideFieldsButton.place(anchor='center', width=25, height=25,relx =.605, rely=.35)  
+        
 
         responseLabel = Label(loginWindow, text="")  
         responseLabel.place(anchor='center', relx =.5, rely=.5)
 
-        submitButton = Button(loginWindow, text="Login", command=lambda: self.submitLogin(usernameField.get(), passwordField.get(), responseLabel))  
+        submitButton = Button(loginWindow, text="Login", command=lambda: self.submitLogin(usernameField.get(), passwordField.get(), responseLabel, loginWindow))  
         submitButton.place(anchor='center', relx =.5, rely=.6)       
        
 
@@ -72,28 +95,37 @@ class ClientApp:
     def registrationScreen(self, parentWindow):
         parentWindow.withdraw()
         registrationWindow = Toplevel(parentWindow)
-        registrationWindow.title('Registration')
-        registrationWindow.geometry('600x400')
+        registrationWindow.title('Registration')        
+        registrationWindow.geometry(self.appSize)
+        registrationWindow.resizable(width=False, height=False)
 
         usernameLabel = Label(registrationWindow, text="Username")  
         usernameLabel.place(anchor='center', relx =.5, rely=.1)
 
 
         usernameField = Entry(registrationWindow,width=10)  
-        usernameField.place(anchor='center', relx =.5, rely=.15) 
+        usernameField.place(anchor='center', width=100, height=25,relx =.5, rely=.15) 
 
         passwordLabel = Label(registrationWindow, text="Password")  
         passwordLabel.place(anchor='center', relx =.5, rely=.3)
 
         passwordField = Entry(registrationWindow,width=10,show="*")  
-        passwordField.place(anchor='center', relx =.5, rely=.35)
+        passwordField.place(anchor='center',width=100, height=25, relx =.5, rely=.35)
         
+
 
         confirmPasswordLabel = Label(registrationWindow, text="Confirm password" )  
         confirmPasswordLabel.place(anchor='center', relx =.5, rely=.5)
         
         confirmPasswordField = Entry(registrationWindow,width=10,show="*")  
-        confirmPasswordField.place(anchor='center', relx =.5, rely=.55)  
+        confirmPasswordField.place(anchor='center',width=100, height=25, relx =.5, rely=.55)  
+
+        entries = [passwordField, confirmPasswordField]
+
+        hideFieldsButton = Button(registrationWindow, image=self.hideImage, command=lambda: self.changePasswordVisibility(entries))  
+        hideFieldsButton.place(anchor='center', width=25, height=25,relx =.605, rely=.35)  
+
+        
 
         validationLabel = Label(registrationWindow, text="")
         validationLabel.place(anchor='center', relx =.5, rely=.6) 
@@ -111,7 +143,7 @@ class ClientApp:
         previousWindow.deiconify()
         currentWindow.withdraw()
 
-    def submitLogin(self, username, password, responseLabel):
+    def submitLogin(self, username, password, responseLabel, currentWindow):
         encodedPassword = self.encodeText(password)        
         user = {"username":username, "password":encodedPassword}
         body = {"route":"login", "user":user}
@@ -119,7 +151,10 @@ class ClientApp:
         self.client_sock.sendall(bytes(userData, encoding="utf-8"))
         data = self.client_sock.recv(1024)
         message = data.decode('utf-8')
-        responseLabel.config(text=message)       
+        responseLabel.config(text=message)      
+        if message == 'Success':
+            self.userScreen(currentWindow)
+            currentWindow.withdraw()
         
     
             
