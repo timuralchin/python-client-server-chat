@@ -6,6 +6,7 @@ import json
 import asyncio
 import hashlib 
 from time import sleep
+import re
 
     
 
@@ -29,8 +30,34 @@ class ClientApp:
             self.window.mainloop()
         finally:
             self.client_sock.close()
+            self.window.destroy()
 
-    def encodeText(self, text):
+    @staticmethod
+    def validatePassword(password,validationLabel):
+        reg = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!#%*?&]{6,20}$"
+        pat = re.compile(reg) 
+        mat = re.search(pat, password)
+        if mat:  
+            validationLabel.config(text="")          
+            return True
+        else:
+            validationLabel.config(text="Password, should contain at least\none number, one uppercase, one lowercase character,\none special symbol, 6 characters" ) 
+            return False
+
+    @staticmethod
+    def validateUsername(username, validationLabel):
+        reg = '^[a-z0-9]+[\._]?[a-z0-9]+[@]\w+[.]\w{2,3}$'
+        pat = re.compile(reg) 
+        mat = re.search(pat, username)
+        if mat:  
+            validationLabel.config(text="")          
+            return True
+        else:
+            validationLabel.config(text="Invalid username(email)") 
+            return False
+
+    @staticmethod
+    def encodeText(text):
         return hashlib.md5(text.encode()).hexdigest()
 
     def startScreen(self):
@@ -42,6 +69,7 @@ class ClientApp:
             validationLabel.config(text="Passwords are not the same")            
             return False
         else:
+            validationLabel.config(text="")   
             return True
     
     def changePasswordVisibility(self, passwordField):        
@@ -130,7 +158,7 @@ class ClientApp:
         
 
         validationLabel = Label(registrationWindow, text="")
-        validationLabel.place(anchor='center', relx =.5, rely=.6) 
+        validationLabel.place(anchor='center', relx =.5, rely=.63) 
             
         responseLabel = Label(registrationWindow, text="")
         responseLabel.place(anchor='center', relx =.5, rely=.7) 
@@ -162,7 +190,7 @@ class ClientApp:
             
 
     def submitRegistration(self, username, password,confirmPassword, responseLabel,validationLabel, currentWindow, previousWindow):
-        if not self.checkPassword(password,confirmPassword, validationLabel):
+        if not self.checkPassword(password,confirmPassword, validationLabel)  or not self.validateUsername(username,validationLabel) or not self.validatePassword(password,validationLabel) :
             return
         encodedPassword = self.encodeText(password)        
         user = {"username":username, "password":encodedPassword}
