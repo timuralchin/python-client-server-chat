@@ -8,7 +8,7 @@ from threading import Thread
 import time
 
 class ServerApp:
-    def __init__(self, port=4000, listen_count=10):
+    def __init__(self, port=4010, listen_count=10):
         self.port = port
         self.listen_count = listen_count
         self.window = Tk()
@@ -60,7 +60,7 @@ class ServerApp:
         user = data['user']
         username = user['username']        
         fileName = 'db/users.json' 
-
+        print(user)
         with open(fileName, 'r') as json_file: 
             users = json.load(json_file) 
 
@@ -89,12 +89,34 @@ class ServerApp:
         server_sault = encodeText(self.tempT)
         result = encodeText(password+server_sault)
 
-        if result == userSault:                      
-            client_sock.sendall(bytes('Success' , encoding="utf-8"))            
+        if result == userSault:
+            g,p,a= generateServer()
+            A = pow(g,a,p)
+            params = (g, p, A)
+            print(f'a={a}')
+            print(f'p={p}')
+            print(f'g={g}')
+            
+
+            print(print(f'Params={params}'))
+            responce = json.dumps({"message": 'Success', "body": params})
+            client_sock.sendall(bytes(responce, encoding="utf-8"))
+            request = client_sock.recv(1024)
+            if not request:            
+                return    
+            request  = request.decode('utf-8') 
+            B = int(request)
+            self.K = self.setKey(B,a,p)
+            print(f'K={self.K}')                     
         else:
-            client_sock.sendall(bytes('Incorrect password' , encoding="utf-8"))    
+            responce =  json.dumps({"message": "Incorrect password"})
+            client_sock.sendall(bytes(responce , encoding="utf-8"))    
 
+    def setKey(self, B, a, p):
+        K = pow(B, a, p)
+        return K
 
+    
     def changePasswordVisibility(self, passwordField):        
         state = passwordField[0].cget("show")
         for etry in passwordField:
@@ -127,12 +149,24 @@ class ServerApp:
         if not request:            
             return    
         decodedJson  = json.loads(request.decode('utf-8')) 
-        # print(f'Request:\n{decodedJson}\n--------------------------------------------------------')       
-        route = decodedJson['route']   
-        method = f'self.{route}'           
+        print(f'Request:\n{decodedJson}\n--------------------------------------------------------')       
+        route = decodedJson['route'] 
+        
+        if route == "chat":
+            message = decrypt(decodedJson['body'], str(self.K))
+            self.logPanel.insert(1.0, f"Decoded:{message}\nRaw:{decodedJson['body']}\n")
+            return  
+        method = f'self.{route}' 
+        print(method)          
         eval(method)(decodedJson,client_sock)  
-        # print(f'Response:\n{result}\n--------------------------------------------------------')          
-        # return result        
+
+    def sendMessage(self, message, entry):
+        enc_message = encrypt(message, str(self.K))
+        responce = json.dumps({"route": 'chat', "body": enc_message})
+        self.client_sock.sendall(bytes(responce, encoding="utf-8"))
+        self.logPanel.insert(1.0, f"{message}\n")
+        entry.delete(0, END)
+
 
     def submitRegistration(self, username, password,confirmPassword, responseLabel,validationLabel, currentWindow):
         if not checkPassword(password,confirmPassword, validationLabel)  or not validateUsername(username,validationLabel) or not validatePassword(password,validationLabel) :
@@ -157,62 +191,71 @@ class ServerApp:
         usernameField.place(anchor='w', width=100, height=25,relx =.05, rely=.15) 
 
         passwordLabel = Label(homeScreen, text="Password")  
-        passwordLabel.place(anchor='w', relx =.05, rely=.3)
+        passwordLabel.place(anchor='w', relx =.05, rely=.2)
 
         passwordField = Entry(homeScreen,width=10,show="*")  
-        passwordField.place(anchor='w',width=100, height=25, relx =.05, rely=.35)        
+        passwordField.place(anchor='w',width=100, height=25, relx =.05, rely=.25)        
 
 
         confirmPasswordLabel = Label(homeScreen, text="Confirm password" )  
-        confirmPasswordLabel.place(anchor='w', relx =.05, rely=.5)
+        confirmPasswordLabel.place(anchor='w', relx =.05, rely=.4)
         
         confirmPasswordField = Entry(homeScreen,width=10,show="*")  
-        confirmPasswordField.place(anchor='w',width=100, height=25, relx =.05, rely=.55)  
+        confirmPasswordField.place(anchor='w',width=100, height=25, relx =.05, rely=.45)  
 
         entries = [passwordField, confirmPasswordField]
 
         hideFieldsButton = Button(homeScreen, text="*", command=lambda: self.changePasswordVisibility(entries))  
-        hideFieldsButton.place(anchor='w', width=25, height=25,relx =.215, rely=.35)  
+        hideFieldsButton.place(anchor='w', width=25, height=25,relx =.215, rely=.25)  
 
         
 
         validationLabel = Label(homeScreen, text="")
-        validationLabel.place(anchor='w', relx =.05, rely=.63) 
+        validationLabel.place(anchor='w', relx =.05, rely=.53) 
             
         responseLabel = Label(homeScreen, text="")
-        responseLabel.place(anchor='w', relx =.05, rely=.7) 
+        responseLabel.place(anchor='w', relx =.05, rely=.6) 
           
         submitButton = Button(homeScreen, text="Register", command=lambda: self.submitRegistration(usernameField.get(), passwordField.get(),confirmPasswordField.get(),responseLabel, validationLabel, homeScreen))  
-        submitButton.place(anchor='w', relx =.05, rely=.8)  
+        submitButton.place(anchor='w', relx =.05, rely=.7)  
+
 
         clearButton = Button(homeScreen, text="Clear log", command=lambda: self.logPanel.delete('1.0', END))  
         clearButton.place(anchor='w', relx =.05, rely=.9)  
 
-        self.logPanel = Text(width=50, height=30)
-        self.logPanel.place(anchor='e', relx =0.95, rely=.5)
+        self.logPanel = Text(width=50, height=20)
+        self.logPanel.place(anchor='e', relx =0.95, rely=.3)
         
         scroll = Scrollbar(command=self.logPanel.yview)
         scroll.pack(side=RIGHT, fill=Y)
 
         self.logPanel.config(yscrollcommand=scroll.set)
+
+        messageField = Entry(homeScreen)  
+        messageField.place(anchor='e',width=350, height=50, relx =.95, rely=.7)  
+
+        sendMessage = Button(homeScreen, text="Send", command= lambda: self.sendMessage(messageField.get(),messageField))  
+        sendMessage.place(anchor='w', relx =.7, rely=.9)  
     
-    def onClosing(self):  
-        self.serv_sock.close()      
-        self.window.destroy()
+    def onClosing(self):                 
+        self.window.destroy()       
+        
  
     def serverLoop(self):
         try:
             while True:
-                    client_sock, client_addr = self.serv_sock.accept()
+                    self.client_sock, client_addr = self.serv_sock.accept()
                     print('Connected by', client_addr)
                     while True:  
-                        self.chooseRoute(client_sock)  
+                        self.chooseRoute(self.client_sock)  
                                 
                     print('Disconnected by', client_addr)        
-                    client_sock.close()
-        finally:
-            self.serv_sock.close()
-
+                    self.client_sock.close()
+        finally:  
+            sys.exit()
+            self.serv_sock.close()                                
+            self.serv_sock.close()  
+            
 
     def start(self):
         self.serv_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM, proto=0)
@@ -223,18 +266,19 @@ class ServerApp:
         try:
             self.homescreen()
             self.window.protocol("WM_DELETE_WINDOW", self.onClosing)
-            serverThread = Thread(target=self.serverLoop)
-            serverThread.start()
+            self.serverThread = Thread(target=self.serverLoop)
+            self.serverThread.start()
             self.window.mainloop()
-            # tkThread = Thread(target=self.window.mainloop)
-            # tkThread.start()
             
-        finally:
             
-            self.onClosing()
+        finally:    
+            self.serv_sock.close()    
+            self.serverThread.join()              
+            
     
 
 
 if __name__=="__main__":
     app = ServerApp()
     app.start()
+    app.onClosing()
